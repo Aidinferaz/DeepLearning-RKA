@@ -30,13 +30,42 @@ def cyclical_encoder(df, col_name='Month', period=12):
     
     return df_copy
 
-def xy_rnn_split(data, target_col, time_steps):
+def xy_rnn_split(data, target_col=None, time_steps=1):
     """
-    Split the data into X and y, then turn it into NumPy Array for RNN training.
+    Split the data into X and y for RNN training.
     """
-    feature = [col for col in data.columns if col != target_col]
-    X, y = [], []
-    for i in range(len(data) - time_steps):
-        X.append(data[feature].values[i:i + time_steps])
-        y.append(data[target_col].values[i + time_steps])
-    return np.array(X), np.array(y).reshape(-1, 1)
+    if target_col is None:
+        X, y = [], []
+        for i in range(len(data) - time_steps):
+            X.append(data[i:i + time_steps])
+            y.append(data[i + time_steps])
+        return np.array(X), np.array(y)
+    else:
+        # For univariate time series prediction (when target is also the feature)
+        if len(data.columns) == 1:
+            X, y = [], []
+            for i in range(len(data) - time_steps):
+                X.append(data[target_col].values[i:i + time_steps])
+                y.append(data[target_col].values[i + time_steps])
+            return np.array(X), np.array(y).reshape(-1, 1)
+        # For multivariate case
+        else:
+            feature = [col for col in data.columns if col != target_col]
+            X, y = [], []
+            for i in range(len(data) - time_steps):
+                X.append(data[feature].values[i:i + time_steps])
+                y.append(data[target_col].values[i + time_steps])
+            return np.array(X), np.array(y).reshape(-1, 1)
+
+def create_sequences(data, sequence_length):
+    sequences = []
+    labels = []
+
+    for i in range(len(data) - sequence_length):
+        seq = data[i:i+sequence_length]  # Ambil sequence selama 'sequence_length' bulan
+        label = data[i+sequence_length]  # Nilai yang akan diprediksi (bulan berikutnya)
+
+        sequences.append(seq)
+        labels.append(label)
+
+    return np.array(sequences), np.array(labels)
